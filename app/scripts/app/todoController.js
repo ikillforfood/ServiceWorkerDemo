@@ -2,9 +2,9 @@
 
 	angular
 		.module('app', ['ngMaterial', 'ngAnimate'])
-		.controller('TodoController', ['$scope', TodoController]);
+		.controller('TodoController', ['$scope', '$http', TodoController]);
 
-	function TodoController($scope, logger) {
+	function TodoController($scope, $http) {
 
 		// List of bindable properties and methods
 		var todo = this;
@@ -24,13 +24,10 @@
 		 */
 		function activate() {
 			// Fill sample tasks
-			todo.tasks = [
-				{ text: "Wake up, work out!", completed: true },
-				{ text: "Play chess with yourself", completed: false },
-				{ text: "Stare at the mirror", completed: true },
-				{ text: "Blink two times fast, and one slow", completed: false }
-			];
-			refreshTasks();
+            $http.post('http://localhost:3000/tasks', null).then(function(response){
+                todo.tasks = response.rows;
+                refreshTasks();
+            });
 		}
 
 		/**
@@ -47,16 +44,31 @@
 			});
 		}
 
+        /**
+         * update completed state of the given task
+         */
+        function updateTask(task){
+            $http.post('http://localhost:3000/update', task).then(function(response){
+                if (task.completed)
+					todo.completedTasks.push(task);
+				else
+					todo.incompleteTasks.push(task);
+            });
+        }
+
 		/**
 		 * Add new task to collection.
 		 */
 		function addTask() {
 			// Only add task if something actually exists
 			if (todo.inputTask) {
-				todo.tasks.push({ text: todo.inputTask, completed: false });
-				refreshTasks();
+                var newTask = { text: todo.inputTask, completed: false };
+                $http.post('http://localhost:3000/add', newTask).then(function(response){
+                    todo.tasks.push(newTask);
+				todo.incompleteTasks.push(newTask);
 				// Reset input to add new task
 				todo.inputTask = "";
+                });
 			}
 		}
 

@@ -9,6 +9,7 @@
   "author": "Mariusz Doborowolski",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.14.0"
+    "express": "^4.14.0",
+    "pouchdb": "^5.4.5"
   }
 }
