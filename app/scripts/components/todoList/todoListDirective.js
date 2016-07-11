@@ -9,8 +9,13 @@
 		var directive = {
 			scope: {
 				tasks: "=",
-				refreshTasks: "&"
+				updateTask: "&"
 			},
+            controller: function($scope){
+                $scope.update = function(task){
+                    $scope.updateTask({task: task});
+                };
+            },
 			templateUrl: 'scripts/components/todoList/todoListView.html',
 			restrict: 'E'
 		}

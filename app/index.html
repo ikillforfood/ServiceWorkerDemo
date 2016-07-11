@@ -35,11 +35,11 @@
 			<label class="todo-message">{{ (todo.incompleteTasks.length ? "Hey chief, some items of utmost importance await your attention!" : "No stuff to do for now; you're either very efficient or lazy to add an item!") }}</label>
 
 			<!-- List incomplete tasks -->
-			<todo-list tasks="todo.incompleteTasks" refresh-tasks="todo.refreshTasks()"></todo-list>
+			<todo-list tasks="todo.incompleteTasks" update-task="todo.updateTask(task)"></todo-list>
 
 			<!-- List completed tasks -->
 			<md-button ng-click="todo.toggleCompletedTasks()">{{ todo.showCompleted ? "Hide completed" : "Show completed" }}</md-button>
-			<todo-list tasks="todo.completedTasks" refresh-tasks="todo.refreshTasks()" ng-show="todo.showCompleted" class="ng-hide"></todo-list>
+			<todo-list tasks="todo.completedTasks" update-task="todo.updateTask(task)" ng-show="todo.showCompleted" class="ng-hide"></todo-list>
 		</md-content>
 	</div>
     
