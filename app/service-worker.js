@@ -25,6 +25,7 @@ var REQUEST_TO_CACHE = [
 
 var heartbeatUrl = 'http://localhost:3000/heartbeat';
 var onlineMode = true;
+var db = null;
 
 function serialize(request) {
   var headers = {};
@@ -52,6 +53,13 @@ function serialize(request) {
 
 function deserialize(data) {
   return Promise.resolve(new Request(data.url, data));
+}
+
+function addToQueue(request){
+    var tx = db.transaction("queue", "readwrite");
+    var store = tx.objectStore("queue");
+
+
 }
 
 function sendInOrder(requests) {
@@ -115,6 +123,21 @@ function checkServerHeartbeat(){
     }).catch(function(err){
         onlineMode = false;
     });
+}
+
+function initDatabase(){
+    var request = indexedDB.open("demo");
+
+        request.onupgradeneeded = function() {
+          // The database did not previously exist, so create object stores and indexes.
+          db = request.result;
+          db.createObjectStore("queue", {keyPath: "name"});
+          store.createIndex("by_name", "name", {unique: true});
+        };
+
+        request.onsuccess = function() {
+          db = request.result;
+        };
 }
 
 self.addEventListener('install', function(event) {
