@@ -44,7 +44,11 @@ app.post('/update', jsonParser, function(req, res){
         console.log(err);
         res.send(500);
     })
-})
+});
+
+app.post('/heartbeat', function(req, res){
+    res.send(200);
+});
 
 app.listen(3000, function () {
   console.log('Example app listening on port 3000!');

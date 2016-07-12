@@ -14,6 +14,39 @@ var REQUIRED_FILES = [
     '/scripts/components/todoList/todoListView.html'
 ];
 
+var RESPONSE_TO_CACHE = [
+    'http://localhost:3000/tasks'
+];
+
+var REQUEST_TO_CACHE = [
+    'http://localhost:3000/update',
+    'http://localhost:3000/add'
+];
+
+var heartbeatUrl = 'http://localhost:3000/heartbeat';
+
+function synchronizeContent(){
+    console.log('synchronizing offline content');
+}
+
+function checkServerHeartbeat(){
+    console.log('checking server hearbeat');
+
+    var myHeaders = new Headers();
+
+    var myInit = { method: 'POST',
+                   headers: myHeaders,
+                   mode: 'cors',
+                   cache: 'default' };
+    var myRequest = new Request(heartbeatUrl, myInit);
+
+    fetch(myRequest, myInit).then(function(response){
+        if(response.status == 200){
+            synchronizeContent();
+        }
+    });
+}
+
 self.addEventListener('install', function(event) {
     event.waitUntil(
     caches.open(CACHE_NAME)
@@ -25,6 +58,9 @@ self.addEventListener('install', function(event) {
       .then(function() {
         console.log('[install] All required resources have been cached, ' +
           'we\'re good!');
+
+        setInterval(checkServerHeartbeat, 1*60*1000);
+
         return self.skipWaiting();
       })
   );
@@ -35,14 +71,36 @@ self.addEventListener('fetch', function(event) {
     caches.match(event.request)
       .then(function(response) {
           if (response) {
-          console.log(
-            '[fetch] Returning from ServiceWorker cache: ',
-            event.request.url
-          );
-          return response;
-        }
+              console.log(
+                '[fetch] Returning from ServiceWorker cache: ',
+                event.request.url
+              );
+
+              if (RESPONSE_TO_CACHE.indexOf(event.request.url) > -1){
+                  fetch(event.request).then(function(response){
+                    return caches.open(CACHE_NAME).then(function(cache) {
+                    cache.put(event.request.url, response.clone());
+                    console.log('[fetch] Cache json result for url: ' + event.request.url);
+                    return response;
+                  })}).catch(function(err){
+                     return response;
+                  });
+              }
+
+              return response;
+          } else if(RESPONSE_TO_CACHE.indexOf(event.request.url) > -1){
+              fetch(event.request).then(function(response){
+                    return caches.open(CACHE_NAME).then(function(cache) {
+                    cache.put(event.request.url, response.clone());
+                    console.log('[fetch] Cache json result for url: ' + event.request.url);
+                    return response;
+                  })}).catch(function(err){
+                     response;
+                  });
+          }
+
           console.log('[fetch] Returning from server: ', event.request.url);
-        return fetch(event.request);
+          return fetch(event.request);
       }
     )
   );
@@ -53,3 +111,5 @@ self.addEventListener('activate', function(event) {
     console.log('[activate] Claiming this ServiceWorker!');
     event.waitUntil(self.clients.claim());
 });
+
+
