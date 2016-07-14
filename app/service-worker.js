@@ -1,3 +1,8 @@
+/* eslint-env es6 */
+/* eslint no-unused-vars: 0 */
+/* global importScripts, localforage */
+importScripts('./localforage.js');
+
 var CACHE_NAME = 'demo-dependencies-cache';
 var REQUIRED_FILES = [
     'index.html',
@@ -55,28 +60,6 @@ function deserialize(data) {
   return Promise.resolve(new Request(data.url, data));
 }
 
-function addToDb(request){
-    var tx = db.transaction("queue", "readwrite");
-    var store = tx.objectStore("queue");
-    var index = store.index("by_name");
-
-    var response = index.get("request_queue");
-    response.onsuccess = function(){
-        if(response.result !== undefined){
-            var queue = response.result.queue || [];
-            queue.push(request);
-            store.put(response.result);
-        }
-    }
-}
-
-function flushDb(){
-    var tx = db.transaction("queue", "readwrite");
-    var store = tx.objectStore("queue");
-
-    store.put({name: "request_queue", queue: []});
-}
-
 function sendInOrder(requests) {
     var sending = requests.reduce(function(prevPromise, serialized) {
     console.log('Sending', serialized.method, serialized.url);
@@ -90,23 +73,7 @@ function sendInOrder(requests) {
 }
 
 function flushQueue() {
-    var tx = db.transaction("queue", "readwrite");
-    var store = tx.objectStore("queue");
-    var index = store.index("by_name");
-
-    var response = index.get("request_queue");
-    response.onsuccess = function(){
-        if(response.result !== undefined){
-            var queue = response.result.queue || [];
-            if(queue.length){
-                sendInOrder(queue).then(function() {
-                    flushDb();
-                });
-            }
-        }
-    }
-
-    /*return localforage.getItem('queue').then(function(queue) {
+    return localforage.getItem('queue').then(function(queue) {
     queue = queue || [];
         if (!queue.length) {
       return Promise.resolve();
@@ -115,19 +82,18 @@ function flushQueue() {
     return sendInOrder(queue).then(function() {
         return localforage.setItem('queue', []);
     });
-  });*/
+  });
 }
 
 function enqueue(request) {
   return serialize(request).then(function(serialized) {
-     addToDb(serialized);
-    /*localforage.getItem('queue').then(function(queue) {
+    localforage.getItem('queue').then(function(queue) {
       queue = queue || [];
       queue.push(serialized);
       return localforage.setItem('queue', queue).then(function() {
         console.log(serialized.method, serialized.url, 'enqueued!');
       });
-    });*/
+    });
   });
 }
 
@@ -157,23 +123,6 @@ function checkServerHeartbeat(){
     });
 }
 
-function initDatabase(){
-    var request = indexedDB.open("demo");
-
-        request.onupgradeneeded = function() {
-          // The database did not previously exist, so create object stores and indexes.
-          db = request.result;
-          var store = db.createObjectStore("queue", {keyPath: "name"});
-          var index = store.createIndex("by_name", "name", {unique: true});
-        };
-
-        request.onsuccess = function() {
-          db = request.result;
-          var store = db.createObjectStore("queue", {keyPath: "name"});
-          var index = store.createIndex("by_name", "name", {unique: true});
-        };
-}
-
 self.addEventListener('install', function(event) {
     event.waitUntil(
     caches.open(CACHE_NAME)
@@ -187,7 +136,6 @@ self.addEventListener('install', function(event) {
           'we\'re good!');
 
         setInterval(checkServerHeartbeat, 1*60*1000);
-        initDatabase();
 
         return self.skipWaiting();
       })
@@ -217,7 +165,14 @@ self.addEventListener('fetch', function(event) {
               return cache;
           } else if(REQUEST_TO_CACHE.indexOf(event.request.url) > -1){
               if(onlineMode){
-                  return fetch(event.request);
+                  return fetch(event.request).then(function(response){
+                      return response;
+                  }).catch(function(err){
+                      onlineMode = false;
+                      return enqueue(event.request).then(function(){
+                        return new Response({status: 200}).clone();
+                      })
+                  })
               } else {
                   return enqueue(event.request).then(function(){
                       return new Response({status: 200}).clone();
