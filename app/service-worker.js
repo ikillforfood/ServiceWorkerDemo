@@ -170,12 +170,16 @@ self.addEventListener('fetch', function(event) {
                   }).catch(function(err){
                       onlineMode = false;
                       return enqueue(event.request).then(function(){
-                        return new Response({status: 200}).clone();
+                        return new Promise(function(resolve, reject){
+                          return new Response({status: 200}).clone();
+                        })
                       })
                   })
               } else {
                   return enqueue(event.request).then(function(){
-                      return new Response({status: 200}).clone();
+                      return new Promise(function(resolve, reject){
+                          return new Response({status: 200}).clone();
+                      })
                   })
               }
           }  else {
